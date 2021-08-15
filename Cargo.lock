@@ -47,7 +47,6 @@ dependencies = [
 name = "fnum"
 version = "0.1.0"
 dependencies = [
- "clap",
  "paw",
  "structopt",
 ]
