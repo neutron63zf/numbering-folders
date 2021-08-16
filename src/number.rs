@@ -3,9 +3,9 @@ use crate::folders;
 
 pub fn number_command(folder_name: String, number: i32) {
     let folders = folders::folder_numbers("./".to_string());
-    let mut gte_folders = folders
+    let gte_folders = folders
         .iter()
-        .filter(|folder| folder.number.unwrap_or(0) >= number);
+        .filter(|folder| folder.number.unwrap_or(0) >= number && folder.path_string != folder_name);
     let before_count_length = (folders
         .iter()
         .map(|folder| folder.number.unwrap_or(0))
@@ -21,13 +21,14 @@ pub fn number_command(folder_name: String, number: i32) {
         + 1)
     .to_string()
     .len() as i32;
-    let is_target_num_exists = gte_folders
+    let is_target_num_exists = folders
+        .iter()
         .find(|folder| folder.number.unwrap_or(0) == number)
         .is_some();
     let mut instructions = Vec::new();
     instructions.push(core::RenameFolderNumber {
         base_path_string: "./".to_string(),
-        path_string: folder_name,
+        path_string: folder_name.clone(),
         target_number: number,
         fill: count_length - number.to_string().len() as i32,
     });

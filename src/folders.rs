@@ -1,5 +1,4 @@
 use super::core::{FolderNumbered, RenameFolderNumber};
-use std::convert::TryInto;
 use std::fs;
 use std::path;
 use std::str::FromStr;
@@ -52,17 +51,17 @@ impl RenameFolderNumber {
         let first = split.next().unwrap();
         let target_name = format!(
             "{}{}_{}",
-            "0".repeat(self.fill.try_into().unwrap()),
+            "0".repeat(self.fill as usize),
             self.target_number,
             // firstが数字だった場合は残りを、そうでない場合はpath_stringをそのまま使う
             first
                 .parse::<i32>()
-                .map(|_| split.collect::<String>())
+                .map(|_| split.collect::<Vec<&str>>().join("_"))
                 .unwrap_or(self.path_string.clone())
         );
         let from_path = base_dir.join(&self.path_string);
         let to_path = base_dir.join(target_name);
-        fs::rename(from_path, to_path).unwrap();
+        fs::rename(&from_path, &to_path).unwrap();
     }
 }
 #[cfg(test)]
