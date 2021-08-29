@@ -145,10 +145,10 @@ where
 impl<N, S> Add<S> for FolderNumberInt<N>
 where
     N: Display,
-    S: Display,
+    S: Display + From<String>,
 {
-    type Output = String;
+    type Output = S;
     fn add(self, other: S) -> Self::Output {
-        format!("{}{}", self.0, other)
+        format!("{}{}", self.0, other).into()
     }
 }
