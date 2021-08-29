@@ -1,6 +1,6 @@
-use std::num::ParseIntError;
-use std::ops::Add;
-use std::{fmt::Debug, ops::Deref, str::FromStr};
+use std::fmt::{Debug, Display};
+use std::ops::{Add, Deref};
+use std::str::FromStr;
 
 // trait
 
@@ -126,19 +126,25 @@ where
     }
 }
 
-pub struct FolderNumberInt(pub u64);
+pub struct FolderNumberInt<N>(pub N);
 
-impl FolderNumber for FolderNumberInt {}
-impl FromStr for FolderNumberInt {
-    type Err = ParseIntError;
+impl<N> FolderNumber for FolderNumberInt<N> {}
+impl<N> FromStr for FolderNumberInt<N>
+where
+    N: FromStr,
+{
+    type Err = N::Err;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.parse::<u64>() {
+        match s.parse::<N>() {
             Ok(u) => Ok(FolderNumberInt(u)),
             Err(err) => Err(err),
         }
     }
 }
-impl Add<String> for FolderNumberInt {
+impl<N> Add<String> for FolderNumberInt<N>
+where
+    N: Display,
+{
     type Output = String;
     fn add(self, other: String) -> String {
         format!("{}{}", self.0, other)
