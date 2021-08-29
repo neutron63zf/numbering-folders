@@ -49,13 +49,6 @@ pub trait FoldersRenameInstruction {}
 
 // struct and impl
 
-pub struct FolderNameString<S>(pub S)
-where
-    S: Deref<Target = str> + std::iter::FromIterator<String> + Clone;
-pub struct NumberedFolderNameString<S>(pub S)
-where
-    S: Deref<Target = str> + std::iter::FromIterator<String> + Clone;
-
 fn get_first_number<S, N>(str: &S) -> Result<N, <N as FromStr>::Err>
 where
     S: Deref<Target = str>,
@@ -64,39 +57,9 @@ where
     str.split("_").next().unwrap().parse()
 }
 
-impl<FN, S> FolderName<FN> for NumberedFolderNameString<S>
+pub struct FolderNameString<S>(pub S)
 where
-    FN: FolderNumber + FromStr + std::ops::Add<S, Output = S>,
-    FN::Err: Debug,
-    S: Deref<Target = str> + std::iter::FromIterator<String> + Clone,
-{
-    type Numbered = NumberedFolderNameString<S>;
-    fn try_get_numbered(&self) -> Result<Self::Numbered, ()> {
-        Ok(NumberedFolderNameString(self.0.clone()))
-    }
-    fn numbering(&self, target_number: FN) -> Self::Numbered {
-        let number = get_first_number::<S, FN>(&self.0);
-        let remaining = if let Ok(_) = number {
-            let mut split = self.0.split("_").map(|s| s.to_owned());
-            split.next();
-            split.collect::<S>()
-        } else {
-            self.0.clone()
-        };
-        NumberedFolderNameString(target_number + remaining)
-    }
-}
-
-impl<FN, S> NumberedFolderName<FN> for NumberedFolderNameString<S>
-where
-    FN: FolderNumber + FromStr + std::ops::Add<S, Output = S>,
-    FN::Err: Debug,
-    S: Deref<Target = str> + std::iter::FromIterator<String> + Clone,
-{
-    fn get_number(&self) -> FN {
-        get_first_number(&self.0).unwrap()
-    }
-}
+    S: Deref<Target = str> + std::iter::FromIterator<String> + Clone;
 
 impl<FN, S> FolderName<FN> for FolderNameString<S>
 where
@@ -123,6 +86,35 @@ where
             self.0.clone()
         };
         NumberedFolderNameString(target_number + remaining)
+    }
+}
+pub struct NumberedFolderNameString<S>(pub S)
+where
+    S: Deref<Target = str> + std::iter::FromIterator<String> + Clone;
+
+impl<FN, S> FolderName<FN> for NumberedFolderNameString<S>
+where
+    FN: FolderNumber + FromStr + std::ops::Add<S, Output = S>,
+    FN::Err: Debug,
+    S: Deref<Target = str> + std::iter::FromIterator<String> + Clone,
+{
+    type Numbered = NumberedFolderNameString<S>;
+    fn try_get_numbered(&self) -> Result<Self::Numbered, ()> {
+        Ok(NumberedFolderNameString(self.0.clone()))
+    }
+    fn numbering(&self, target_number: FN) -> Self::Numbered {
+        FolderNameString(self.0.clone()).numbering(target_number)
+    }
+}
+
+impl<FN, S> NumberedFolderName<FN> for NumberedFolderNameString<S>
+where
+    FN: FolderNumber + FromStr + std::ops::Add<S, Output = S>,
+    FN::Err: Debug,
+    S: Deref<Target = str> + std::iter::FromIterator<String> + Clone,
+{
+    fn get_number(&self) -> FN {
+        get_first_number(&self.0).unwrap()
     }
 }
 
