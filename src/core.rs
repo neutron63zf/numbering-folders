@@ -62,11 +62,8 @@ pub trait NumberedFolderNameCollection<N: FolderNumber, NF: NumberedFolderName<N
     ) -> Self::Instruction;
 }
 
-// executeすれば反映されるやつ
-pub trait FoldersRenameInstruction {
-    // 実行する
-    fn execute(&self) -> Result<(), ()>;
-}
+// repositoryはこれを元に実行する
+pub trait FoldersRenameInstruction {}
 
 // application business rules trait
 
