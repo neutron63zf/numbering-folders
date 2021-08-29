@@ -57,6 +57,22 @@ where
     str.split("_").next().unwrap().parse()
 }
 
+fn numbering<S, N>(str: &S, target_number: N) -> S
+where
+    S: Deref<Target = str> + std::iter::FromIterator<String> + Clone,
+    N: FromStr + std::ops::Add<S, Output = S>,
+{
+    let number = get_first_number::<S, N>(str);
+    let remaining = if let Ok(_) = number {
+        let mut split = str.split("_").map(|s| s.to_owned());
+        split.next();
+        split.collect::<S>()
+    } else {
+        str.clone()
+    };
+    target_number + remaining
+}
+
 pub struct FolderNameString<S>(pub S)
 where
     S: Deref<Target = str> + std::iter::FromIterator<String> + Clone;
@@ -77,15 +93,7 @@ where
         }
     }
     fn numbering(&self, target_number: FN) -> Self::Numbered {
-        let number = get_first_number::<S, FN>(&self.0);
-        let remaining = if let Ok(_) = number {
-            let mut split = self.0.split("_").map(|s| s.to_owned());
-            split.next();
-            split.collect::<S>()
-        } else {
-            self.0.clone()
-        };
-        NumberedFolderNameString(target_number + remaining)
+        NumberedFolderNameString(numbering(&self.0, target_number))
     }
 }
 pub struct NumberedFolderNameString<S>(pub S)
@@ -103,7 +111,7 @@ where
         Ok(NumberedFolderNameString(self.0.clone()))
     }
     fn numbering(&self, target_number: FN) -> Self::Numbered {
-        FolderNameString(self.0.clone()).numbering(target_number)
+        NumberedFolderNameString(numbering(&self.0, target_number))
     }
 }
 
