@@ -54,6 +54,7 @@ pub trait NumberedFolderNameCollection<N: FolderNumber, NF: NumberedFolderName<N
     fn get_order_instruction(&self) -> Self::Instruction;
     // numberコマンドに対応するinstructionを返す
     // folder_nameはNumberedFoldernameに変換可能なFolderNameを取る
+    // これがIntoではないのは、numberがないとFolderNameをNumberedFolderNameに変換できないから
     fn get_number_instruction<F: FolderName<N, Numbered = NF>>(
         &self,
         folder_name: F,
