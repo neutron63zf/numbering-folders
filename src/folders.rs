@@ -8,7 +8,7 @@ pub fn sample() {
     let mut paths = fs::read_dir(".").unwrap();
     let path = paths.next().unwrap().unwrap();
     let f = FolderNameString(path.file_name().into_string().unwrap());
-    f.numbering(FolderNumberInt(1));
+    let _n = f.numbering(FolderNumberInt(1));
 }
 
 fn get_folders(path_string: &String) -> Vec<path::PathBuf> {
