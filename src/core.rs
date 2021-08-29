@@ -63,7 +63,7 @@ pub trait NumberedFolderNameCollection<N: FolderNumber, NF: NumberedFolderName<N
 }
 
 // executeすれば反映されるやつ
-pub trait FoldersRenameInstruction: Sized {
+pub trait FoldersRenameInstruction {
     // 実行する
     fn execute(&self) -> Result<(), ()>;
 }
