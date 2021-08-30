@@ -59,30 +59,28 @@ where
 
 fn numbering<S, N>(str: S, target_number: N) -> S
 where
-    S: Into<String> + std::iter::FromIterator<String> + Clone,
-    N: FromStr + std::ops::Add<S, Output = S>,
+    S: Into<String> + From<String> + Clone,
+    N: FromStr + Add<S, Output = S>,
 {
     let number = get_first_number::<S, N>(str.clone());
+    let str = str.into();
     let remaining = if let Ok(_) = number {
-        let str = str.into();
-        let mut split = str.split("_").map(|s| s.to_owned());
+        let mut split = str.split("_");
         split.next();
-        split.collect::<S>()
+        split.collect::<Vec<_>>().join("_")
     } else {
         str
     };
-    target_number + remaining
+    target_number + remaining.into()
 }
 
-pub struct FolderNameString<S>(pub S)
-where
-    S: Into<String> + std::iter::FromIterator<String> + Clone;
+pub struct FolderNameString<S>(pub S);
 
 impl<FN, S> FolderName<FN> for FolderNameString<S>
 where
-    FN: FolderNumber + FromStr + std::ops::Add<S, Output = S>,
+    FN: FolderNumber + FromStr + Add<S, Output = S>,
     FN::Err: Debug,
-    S: Into<String> + std::iter::FromIterator<String> + Clone,
+    S: Into<String> + From<String> + Clone,
 {
     type Numbered = NumberedFolderNameString<S>;
     fn try_get_numbered(&self) -> Result<Self::Numbered, ()> {
@@ -97,15 +95,13 @@ where
         NumberedFolderNameString(numbering(self.0.clone(), target_number))
     }
 }
-pub struct NumberedFolderNameString<S>(pub S)
-where
-    S: Into<String> + std::iter::FromIterator<String> + Clone;
+pub struct NumberedFolderNameString<S>(pub S);
 
 impl<FN, S> FolderName<FN> for NumberedFolderNameString<S>
 where
-    FN: FolderNumber + FromStr + std::ops::Add<S, Output = S>,
+    FN: FolderNumber + FromStr + Add<S, Output = S>,
     FN::Err: Debug,
-    S: Into<String> + std::iter::FromIterator<String> + Clone,
+    S: Into<String> + From<String> + Clone,
 {
     type Numbered = NumberedFolderNameString<S>;
     fn try_get_numbered(&self) -> Result<Self::Numbered, ()> {
@@ -118,9 +114,9 @@ where
 
 impl<FN, S> NumberedFolderName<FN> for NumberedFolderNameString<S>
 where
-    FN: FolderNumber + FromStr + std::ops::Add<S, Output = S>,
+    FN: FolderNumber + FromStr + Add<S, Output = S>,
     FN::Err: Debug,
-    S: Into<String> + std::iter::FromIterator<String> + Clone,
+    S: Into<String> + From<String> + Clone,
 {
     fn get_number(&self) -> FN {
         get_first_number(self.0.clone()).unwrap()
@@ -145,10 +141,10 @@ where
 impl<N, S> Add<S> for FolderNumberInt<N>
 where
     N: Display,
-    S: Display + From<String>,
+    S: Into<String> + From<String>,
 {
     type Output = S;
     fn add(self, other: S) -> Self::Output {
-        format!("{}{}", self.0, other).into()
+        format!("{}{}", self.0, other.into()).into()
     }
 }
