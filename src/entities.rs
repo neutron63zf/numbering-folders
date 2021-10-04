@@ -1,150 +1,111 @@
-use std::fmt::{Debug, Display};
-use std::ops::Add;
-use std::str::FromStr;
-
-// trait
+use std::convert::TryInto;
+use std::num::ParseIntError;
 
 // フォルダの番号
-pub trait FolderNumber {}
+#[derive(Debug, Clone)]
+pub struct FolderNumber(usize);
+// フォルダの文字列
+#[derive(Debug, Clone)]
+pub struct FolderName(String);
+// 先頭の数字を除いたフォルダ名の文字列
+#[derive(Debug, Clone)]
+pub struct FolderNameNormalized(String);
+// 数字付きフォルダの文字列
+#[derive(Debug, Clone)]
+pub struct NumberedFolderName {
+    pub number: FolderNumber,
+    pub normalized_name: FolderNameNormalized,
+}
+impl TryInto<NumberedFolderName> for FolderName {
+    type Error = ParseIntError;
 
-// フォルダ名（string的な何かに実装したい）
-// 他のFolderNumberを与えたら他のNumberedFolderNameになって欲しいのでgenerics
-pub trait FolderName<FN: FolderNumber> {
-    // Numberedがassociated typeであるのは、FolderNameとFolderNumberの組み合わせについて、
-    // NumberedFolderNameは一つしか存在しないため
-    type Numbered: NumberedFolderName<FN>;
-    // FolderNameの先頭の数字を読み取って、うまく行ったらNumberedにする
-    fn try_get_numbered(&self) -> Result<Self::Numbered, ()>;
-    // FolderNameをtarget_numberを用いてNumberedにする
-    fn numbering(&self, target_number: FN) -> Self::Numbered;
+    fn try_into(self) -> Result<NumberedFolderName, Self::Error> {
+        let number = self.get_first_number()?;
+        let normalized = self.get_remaining_name();
+        Ok(NumberedFolderName {
+            number,
+            normalized_name: normalized,
+        })
+    }
+}
+pub enum FolderNameVariant {
+    Normal(FolderName),
+    Numbered(NumberedFolderName),
+}
+// フォルダ名変更命令
+pub struct FolderRenameInstruction {
+    pub target: FolderNameVariant,
+    pub new_name: NumberedFolderName,
 }
 
-// 先頭に数字がついたフォルダ名
-// いろんなFolderNumberについてそれぞれNumberedFolderNameがあって欲しいのでgenerics
-pub trait NumberedFolderName<FN: FolderNumber>: FolderName<FN> {
-    // FolderNameから数字を取り出す
-    // この型ができる時点でうまくできるはずなのでResultではない
-    fn get_number(&self) -> FN;
-}
-
-// NumberedFolderNameのコレクション
-// いろんなNumberedFolderNameがあって欲しいのでgenerics
-pub trait NumberedFolderNameCollection<FN: FolderNumber, NF: NumberedFolderName<FN>> {
-    // FolderNumberとNumberedFolderNameが決まった時点で与えられるInstructionの型は確定できる
-    type Instruction: FoldersRenameInstruction;
-    // orderコマンドに対応するinstructionを返す
-    fn get_order_instruction(&self) -> Self::Instruction;
-    // numberコマンドに対応するinstructionを返す
-    // folder_nameはNumberedFoldernameに変換可能なFolderNameを取る
-    // これがIntoではないのは、numberがないとFolderNameをNumberedFolderNameに変換できないから
-    fn get_number_instruction<F: FolderName<FN, Numbered = NF>>(
-        &self,
-        folder_name: F,
-        number: FN,
-    ) -> Self::Instruction;
-}
-
-// repositoryはこれを元に実行する
-pub trait FoldersRenameInstruction {}
-
-// struct and impl
-
-fn get_first_number<S, N>(str: S) -> Result<N, N::Err>
-where
-    S: Into<String>,
-    N: FromStr,
-{
-    str.into().split("_").next().unwrap().parse()
-}
-
-fn numbering<S, N>(str: S, target_number: N) -> S
-where
-    S: Into<String> + From<String> + Clone,
-    N: FromStr + Add<S, Output = S>,
-{
-    let number = get_first_number::<S, N>(str.clone());
-    let str = str.into();
-    let remaining = if let Ok(_) = number {
-        let mut split = str.split("_");
-        split.next();
-        split.collect::<Vec<_>>().join("_")
-    } else {
-        str
-    };
-    target_number + remaining.into()
-}
-
-pub struct FolderNameString<S>(pub S);
-
-impl<FN, S> FolderName<FN> for FolderNameString<S>
-where
-    FN: FolderNumber + FromStr + Add<S, Output = S>,
-    FN::Err: Debug,
-    S: Into<String> + From<String> + Clone,
-{
-    type Numbered = NumberedFolderNameString<S>;
-    fn try_get_numbered(&self) -> Result<Self::Numbered, ()> {
-        let number = get_first_number::<S, FN>(self.0.clone());
-        if let Ok(_) = number {
-            Ok(NumberedFolderNameString(self.0.clone()))
-        } else {
-            Err(())
+// フォルダ名であると言うことを扱いたい時のトレイト
+trait FolderNameTrait: Sized {
+    fn get_name(&self) -> FolderName;
+    fn numbering(&self, number: FolderNumber) -> FolderRenameInstruction;
+    fn get_remaining_name(&self) -> FolderNameNormalized {
+        let name = self.get_name().0;
+        let head = name.split("_").next().unwrap();
+        let head_parsed = head.parse::<usize>();
+        match head_parsed {
+            Ok(_) => FolderNameNormalized((&name[head.len()..]).to_string()),
+            Err(_) => FolderNameNormalized(name),
         }
     }
-    fn numbering(&self, target_number: FN) -> Self::Numbered {
-        NumberedFolderNameString(numbering(self.0.clone(), target_number))
+    fn get_first_number(&self) -> Result<FolderNumber, ParseIntError> {
+        let name = self.get_name().0;
+        let head = name.split("_").next().unwrap();
+        let head_parsed = head.parse::<usize>();
+        head_parsed.map(|result| FolderNumber(result))
     }
 }
-pub struct NumberedFolderNameString<S>(pub S);
-
-impl<FN, S> FolderName<FN> for NumberedFolderNameString<S>
-where
-    FN: FolderNumber + FromStr + Add<S, Output = S>,
-    FN::Err: Debug,
-    S: Into<String> + From<String> + Clone,
-{
-    type Numbered = NumberedFolderNameString<S>;
-    fn try_get_numbered(&self) -> Result<Self::Numbered, ()> {
-        Ok(NumberedFolderNameString(self.0.clone()))
+impl FolderNameTrait for FolderName {
+    fn get_name(&self) -> FolderName {
+        FolderName(self.0.clone())
     }
-    fn numbering(&self, target_number: FN) -> Self::Numbered {
-        NumberedFolderNameString(numbering(self.0.clone(), target_number))
+    fn numbering(&self, number: FolderNumber) -> FolderRenameInstruction {
+        let numbered = NumberedFolderName {
+            number,
+            normalized_name: self.get_remaining_name(),
+        };
+        let instruction = FolderRenameInstruction {
+            target: FolderNameVariant::Normal(self.clone()),
+            new_name: numbered,
+        };
+        instruction
+    }
+}
+impl FolderNameTrait for NumberedFolderName {
+    fn get_name(&self) -> FolderName {
+        FolderName(format!(
+            "{}_{}",
+            self.number.0,
+            self.normalized_name.0.clone()
+        ))
+    }
+    fn numbering(&self, number: FolderNumber) -> FolderRenameInstruction {
+        let numbered = NumberedFolderName {
+            number,
+            normalized_name: self.normalized_name.clone(),
+        };
+        let instruction = FolderRenameInstruction {
+            target: FolderNameVariant::Numbered(self.clone()),
+            new_name: numbered,
+        };
+        instruction
+    }
+    fn get_remaining_name(&self) -> FolderNameNormalized {
+        self.normalized_name.clone()
+    }
+    fn get_first_number(&self) -> Result<FolderNumber, ParseIntError> {
+        Ok(self.number.clone())
     }
 }
 
-impl<FN, S> NumberedFolderName<FN> for NumberedFolderNameString<S>
-where
-    FN: FolderNumber + FromStr + Add<S, Output = S>,
-    FN::Err: Debug,
-    S: Into<String> + From<String> + Clone,
-{
-    fn get_number(&self) -> FN {
-        get_first_number(self.0.clone()).unwrap()
-    }
-}
+// パス文字列
+pub struct PathString(String);
 
-pub struct FolderNumberInt<N>(pub N);
-
-impl<N> FolderNumber for FolderNumberInt<N> {}
-impl<N> FromStr for FolderNumberInt<N>
-where
-    N: FromStr,
-{
-    type Err = N::Err;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.parse::<N>() {
-            Ok(u) => Ok(FolderNumberInt(u)),
-            Err(err) => Err(err),
-        }
-    }
-}
-impl<N, S> Add<S> for FolderNumberInt<N>
-where
-    N: Display,
-    S: Into<String> + From<String>,
-{
-    type Output = S;
-    fn add(self, other: S) -> Self::Output {
-        format!("{}{}", self.0, other.into()).into()
-    }
+// フォルダ名を実際に取得、操作するトレイト
+pub trait FolderRenameExecutor {
+    fn get_folder_names(&self, path: PathString) -> Vec<FolderNameVariant>;
+    fn execute_rename(&self, instruction: FolderRenameInstruction) -> Result<(), String>;
 }
