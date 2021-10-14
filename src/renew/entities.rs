@@ -4,17 +4,17 @@ use std::num::ParseIntError;
 // フォルダの番号
 // 通常の数字と、数字を文字列にしたときの長さ
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct FolderNumber(pub usize, pub usize);
+struct FolderNumber(usize, usize);
 // フォルダの文字列
 #[derive(Debug, Clone)]
 pub struct FolderName(String);
 // 先頭の数字を除いたフォルダ名の文字列
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FolderNameNormalized(String);
+struct FolderNameNormalized(String);
 // 数字付きフォルダの文字列
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NumberedFolderName {
-    pub number: FolderNumber,
+    number: FolderNumber,
     normalized_name: FolderNameNormalized,
 }
 impl TryInto<NumberedFolderName> for FolderName {
@@ -50,7 +50,7 @@ pub struct FolderRenameInstruction {
 }
 
 // フォルダ名であると言うことを扱いたい時のトレイト
-pub trait FolderNameTrait {
+trait FolderNameTrait {
     fn get_name(&self) -> FolderName;
     fn numbering(&self, number: FolderNumber) -> FolderRenameInstruction;
     fn get_remaining_name(&self) -> FolderNameNormalized {
@@ -120,5 +120,71 @@ impl FolderNameVariant {
             FolderNameVariant::Normal(name) => name.numbering(number),
             FolderNameVariant::Numbered(name) => name.numbering(number),
         }
+    }
+}
+
+// フォルダ名に数字をつける時の数値
+pub struct NumberingNumber(usize);
+
+// フォルダ名の列に対する操作を出力する
+pub struct FolderList(Vec<FolderNameVariant>);
+
+impl FolderList {
+    fn filter_numbered(&self) -> Vec<NumberedFolderName> {
+        self.0
+            .iter()
+            .filter_map(|x| match x {
+                FolderNameVariant::Numbered(x) => Some(x.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+    pub fn order(&self) -> Vec<FolderRenameInstruction> {
+        let mut numbered = self.filter_numbered();
+        let number_length = (numbered.len() - 1).to_string().len();
+        numbered.sort();
+        let instructions = numbered
+            .into_iter()
+            .enumerate()
+            .map(|(i, x)| x.numbering(FolderNumber(i, number_length)))
+            .collect();
+        instructions
+    }
+    pub fn number(
+        &self,
+        name: FolderNameVariant,
+        number: NumberingNumber,
+    ) -> Vec<FolderRenameInstruction> {
+        let numbered = self.filter_numbered();
+        let max_number_length = if let Some(max) = numbered.iter().max() {
+            (max.number.0 + 1).to_string().len()
+        } else {
+            number.0.to_string().len()
+        };
+        let mut instructions = numbered
+            .into_iter()
+            .map(|name| {
+                let current_number = &name.number;
+                let target_number = if current_number.0 >= number.0 {
+                    current_number.0 + 1
+                } else {
+                    current_number.0
+                };
+                (FolderNameVariant::Numbered(name), target_number)
+            })
+            .collect::<Vec<_>>();
+        instructions.push((name, number.0));
+        // target_numberでソートし直す
+        instructions.sort_by(|(_, a), (_, b)| a.cmp(b));
+        // enumerateを使って間をつめる
+        let instructions = instructions
+            .iter()
+            .enumerate()
+            .map(|(i, (name, _))| {
+                let target_number = FolderNumber(i, max_number_length);
+                name.numbering(target_number)
+            })
+            .collect();
+        instructions
     }
 }
