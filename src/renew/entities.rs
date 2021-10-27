@@ -188,3 +188,15 @@ impl FolderList {
         instructions
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn folder_name_try_into_success() {
+        let folder_name = FolderName("39_hoge".to_string());
+        let numbered_folder_name: Result<NumberedFolderName, _> = folder_name.try_into();
+        assert!(numbered_folder_name.is_ok());
+        assert_eq!(numbered_folder_name.unwrap().number.0, 39);
+    }
+}
