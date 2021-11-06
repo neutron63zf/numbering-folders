@@ -6,7 +6,7 @@ use std::num::ParseIntError;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct FolderNumber(usize, usize);
 // フォルダの文字列
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FolderName(String);
 // 先頭の数字を除いたフォルダ名の文字列
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,11 +39,13 @@ impl Ord for NumberedFolderName {
         self.partial_cmp(&other).unwrap()
     }
 }
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FolderNameVariant {
     Normal(FolderName),
     Numbered(NumberedFolderName),
 }
 // フォルダ名変更命令
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FolderRenameInstruction {
     target: FolderNameVariant,
     new_name: NumberedFolderName,
@@ -58,7 +60,7 @@ trait FolderNameTrait {
         let head = name.split("_").next().unwrap();
         let head_parsed = head.parse::<usize>();
         match head_parsed {
-            Ok(_) => FolderNameNormalized((&name[head.len()..]).to_string()),
+            Ok(_) => FolderNameNormalized((&name[(head.len() + 1)..]).to_string()),
             Err(_) => FolderNameNormalized(name),
         }
     }
@@ -193,10 +195,118 @@ impl FolderList {
 mod test {
     use super::*;
     #[test]
+    fn folder_name_get_remaining_ok() {
+        let name = FolderName("1_hoge".to_string());
+        let result = name.get_remaining_name();
+        assert_eq!(result.0, "hoge");
+    }
+    #[test]
+    fn folder_name_get_remaining_err() {
+        let name = FolderName("hoge".to_string());
+        let result = name.get_remaining_name();
+        assert_eq!(result.0, "hoge");
+    }
+    #[test]
+    fn folder_name_get_first_num() {
+        let name = FolderName("28_hoge".to_string());
+        let result = name.get_first_number().unwrap();
+        assert_eq!(result, FolderNumber(28, 2));
+    }
+    #[test]
     fn folder_name_try_into_success() {
         let folder_name = FolderName("39_hoge".to_string());
         let numbered_folder_name: Result<NumberedFolderName, _> = folder_name.try_into();
         assert!(numbered_folder_name.is_ok());
-        assert_eq!(numbered_folder_name.unwrap().number.0, 39);
+        assert_eq!(
+            numbered_folder_name,
+            Ok(NumberedFolderName {
+                number: FolderNumber(39, 2),
+                normalized_name: FolderNameNormalized("hoge".to_string())
+            })
+        );
+    }
+    #[test]
+    fn folder_name_try_into_failure() {
+        let folder_name = FolderName("hoge".to_string());
+        let numbered_folder_name: Result<NumberedFolderName, _> = folder_name.try_into();
+        assert!(numbered_folder_name.is_err());
+    }
+    #[test]
+    fn numbered_folder_name_cmp() {
+        let numbered_folder_name_1 = NumberedFolderName {
+            number: FolderNumber(39, 2),
+            normalized_name: FolderNameNormalized("hoge".to_string()),
+        };
+        let numbered_folder_name_2 = NumberedFolderName {
+            number: FolderNumber(40, 2),
+            normalized_name: FolderNameNormalized("hoge".to_string()),
+        };
+        assert!(numbered_folder_name_1 < numbered_folder_name_2);
+        assert_eq!(
+            numbered_folder_name_1.cmp(&numbered_folder_name_2),
+            std::cmp::Ordering::Less
+        );
+    }
+    #[test]
+    fn numbering_folder_name() {
+        let folder_name = FolderName("hoge".to_string());
+        let instruction = folder_name.numbering(FolderNumber(39, 2));
+        let instruction_expect = FolderRenameInstruction {
+            target: FolderNameVariant::Normal(folder_name.clone()),
+            new_name: NumberedFolderName {
+                number: FolderNumber(39, 2),
+                normalized_name: FolderNameNormalized("hoge".to_string()),
+            },
+        };
+        assert_eq!(instruction, instruction_expect);
+    }
+    #[test]
+    fn numbering_folder_get_name() {
+        let numbered_folder_name = NumberedFolderName {
+            number: FolderNumber(39, 2),
+            normalized_name: FolderNameNormalized("hoge".to_string()),
+        };
+        assert_eq!(
+            numbered_folder_name.get_name(),
+            FolderName("39_hoge".to_string())
+        );
+    }
+    #[test]
+    fn numbering_folder_numbering() {
+        let numbered_folder_name = NumberedFolderName {
+            number: FolderNumber(39, 2),
+            normalized_name: FolderNameNormalized("hoge".to_string()),
+        };
+        let instruction = numbered_folder_name.numbering(FolderNumber(40, 2));
+        let instruction_expect = FolderRenameInstruction {
+            target: FolderNameVariant::Numbered(numbered_folder_name),
+            new_name: NumberedFolderName {
+                number: FolderNumber(40, 2),
+                normalized_name: FolderNameNormalized("hoge".to_string()),
+            },
+        };
+        assert_eq!(instruction, instruction_expect);
+    }
+    #[test]
+    fn numbering_folder_get_remaining() {
+        let numbered_folder_name = NumberedFolderName {
+            number: FolderNumber(39, 2),
+            normalized_name: FolderNameNormalized("hoge".to_string()),
+        };
+        assert_eq!(
+            numbered_folder_name.get_remaining_name(),
+            FolderNameNormalized("hoge".to_string())
+        );
+    }
+    #[test]
+    fn numbering_folder_get_first_number() {
+        let numbered_folder_name = NumberedFolderName {
+            number: FolderNumber(39, 2),
+            normalized_name: FolderNameNormalized("hoge".to_string()),
+        };
+        assert_eq!(
+            numbered_folder_name.get_first_number(),
+            Ok(FolderNumber(39, 2))
+        );
     }
 }
