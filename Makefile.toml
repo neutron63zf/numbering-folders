@@ -1,2 +1,5 @@
 [tasks.tarpaulin]
-script = 'docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin cargo tarpaulin --tests --out Html'
+script = 'docker build . -t nkowne63/fnum-test && docker run --rm --security-opt seccomp=unconfined -v "${PWD}:/export" nkowne63/fnum-test sh -c "cargo tarpaulin --tests --out Html && mv ./tarpaulin-report.html /export"'
+
+[tasks.tarpaulin-legacy]
+script = 'docker run --rm --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin cargo tarpaulin --tests --out Html'
