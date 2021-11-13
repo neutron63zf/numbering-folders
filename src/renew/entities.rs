@@ -309,4 +309,126 @@ mod test {
             Ok(FolderNumber(39, 2))
         );
     }
+    #[test]
+    fn numbering_variants_numbered() {
+        let numbered_folder_name = NumberedFolderName {
+            number: FolderNumber(39, 2),
+            normalized_name: FolderNameNormalized("hoge".to_string()),
+        };
+        let numbered_folder_name_variants =
+            FolderNameVariant::Numbered(numbered_folder_name.clone());
+        let numbered_folder_rename_expect = FolderRenameInstruction {
+            target: FolderNameVariant::Numbered(numbered_folder_name),
+            new_name: NumberedFolderName {
+                number: FolderNumber(40, 2),
+                normalized_name: FolderNameNormalized("hoge".to_string()),
+            },
+        };
+        assert_eq!(
+            numbered_folder_name_variants.numbering(FolderNumber(40, 2)),
+            numbered_folder_rename_expect
+        );
+    }
+    #[test]
+    fn number_variants_normal() {
+        let folder_name = FolderName("hoge".to_string());
+        let folder_name_variants = FolderNameVariant::Normal(folder_name.clone());
+        let folder_rename_expect = FolderRenameInstruction {
+            target: FolderNameVariant::Normal(folder_name),
+            new_name: NumberedFolderName {
+                number: FolderNumber(39, 2),
+                normalized_name: FolderNameNormalized("hoge".to_string()),
+            },
+        };
+        assert_eq!(
+            folder_name_variants.numbering(FolderNumber(39, 2)),
+            folder_rename_expect
+        );
+    }
+    fn get_sample_folder_list() -> FolderList {
+        FolderList(vec![
+            FolderNameVariant::Normal(FolderName("hoge".to_string())),
+            FolderNameVariant::Numbered(FolderName("0_fuga".to_string()).try_into().unwrap()),
+            FolderNameVariant::Numbered(FolderName("2_fuga".to_string()).try_into().unwrap()),
+        ])
+    }
+    #[test]
+    fn folder_list_numbering() {
+        let folder_list = get_sample_folder_list();
+        let instructions = folder_list.order();
+        let instructions_expect = vec![
+            FolderRenameInstruction {
+                target: FolderNameVariant::Numbered(
+                    FolderName("0_fuga".to_string()).try_into().unwrap(),
+                ),
+                new_name: NumberedFolderName {
+                    number: FolderNumber(0, 1),
+                    normalized_name: FolderNameNormalized("fuga".to_string()),
+                },
+            },
+            FolderRenameInstruction {
+                target: FolderNameVariant::Numbered(
+                    FolderName("2_fuga".to_string()).try_into().unwrap(),
+                ),
+                new_name: NumberedFolderName {
+                    number: FolderNumber(1, 1),
+                    normalized_name: FolderNameNormalized("fuga".to_string()),
+                },
+            },
+        ];
+        assert_eq!(instructions, instructions_expect);
+    }
+    #[test]
+    fn folder_list_get_numbered_folder_names() {
+        let folder_list = get_sample_folder_list();
+        let name = FolderNameVariant::Normal(FolderName("hoge".to_string()));
+        let number = NumberingNumber(2);
+        let instructions = folder_list.number(name, number);
+        let instructions_expect = vec![
+            FolderRenameInstruction {
+                target: FolderNameVariant::Numbered(
+                    FolderName("0_fuga".to_string()).try_into().unwrap(),
+                ),
+                new_name: NumberedFolderName {
+                    number: FolderNumber(0, 1),
+                    normalized_name: FolderNameNormalized("fuga".to_string()),
+                },
+            },
+            FolderRenameInstruction {
+                target: FolderNameVariant::Normal(FolderName("hoge".to_string())),
+                new_name: NumberedFolderName {
+                    number: FolderNumber(1, 1),
+                    normalized_name: FolderNameNormalized("hoge".to_string()),
+                },
+            },
+            FolderRenameInstruction {
+                target: FolderNameVariant::Numbered(
+                    FolderName("2_fuga".to_string()).try_into().unwrap(),
+                ),
+                new_name: NumberedFolderName {
+                    number: FolderNumber(2, 1),
+                    normalized_name: FolderNameNormalized("fuga".to_string()),
+                },
+            },
+        ];
+        assert_eq!(instructions, instructions_expect);
+    }
+    #[test]
+    fn folder_list_get_numbered_folder_names_initial() {
+        let folder_list = FolderList(vec![
+            FolderNameVariant::Normal(FolderName("hoge".to_string())),
+            FolderNameVariant::Normal(FolderName("fuga".to_string())),
+        ]);
+        let name = FolderNameVariant::Normal(FolderName("hoge".to_string()));
+        let number = NumberingNumber(2);
+        let instructions = folder_list.number(name, number);
+        let instructions_expect = vec![FolderRenameInstruction {
+            target: FolderNameVariant::Normal(FolderName("hoge".to_string())),
+            new_name: NumberedFolderName {
+                number: FolderNumber(0, 1),
+                normalized_name: FolderNameNormalized("hoge".to_string()),
+            },
+        }];
+        assert_eq!(instructions, instructions_expect);
+    }
 }
