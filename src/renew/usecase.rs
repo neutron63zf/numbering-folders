@@ -30,7 +30,7 @@ impl<FRE: FolderRenameExecutor> FolderNameChanger<FRE> {
         for instruction in folder_list.order() {
             self.executor.execute_rename(path, instruction)?;
         }
-        return Ok(());
+        Ok(())
     }
     fn number(
         &self,
@@ -42,6 +42,6 @@ impl<FRE: FolderRenameExecutor> FolderNameChanger<FRE> {
         for instruction in folder_list.number(name, number) {
             self.executor.execute_rename(path, instruction)?;
         }
-        return Ok(());
+        Ok(())
     }
 }

@@ -1,7 +1,7 @@
-use crate::core;
-use crate::folders;
 
-pub fn number_command(folder_name: String, number: i32) {
+
+
+pub fn number_command(_folder_name: String, _number: i32) {
     // let folders = folders::folder_numbers("./".to_string());
     // let gte_folders = folders
     //     .iter()
