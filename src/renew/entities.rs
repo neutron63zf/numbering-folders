@@ -36,7 +36,7 @@ impl PartialOrd for NumberedFolderName {
 }
 impl Ord for NumberedFolderName {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.partial_cmp(&other).unwrap()
+        self.partial_cmp(other).unwrap()
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,7 +57,7 @@ trait FolderNameTrait {
     fn numbering(&self, number: FolderNumber) -> FolderRenameInstruction;
     fn get_remaining_name(&self) -> FolderNameNormalized {
         let name = self.get_name().0;
-        let head = name.split("_").next().unwrap();
+        let head = name.split('_').next().unwrap();
         let head_parsed = head.parse::<usize>();
         match head_parsed {
             Ok(_) => FolderNameNormalized((&name[(head.len() + 1)..]).to_string()),
@@ -66,7 +66,7 @@ trait FolderNameTrait {
     }
     fn get_first_number(&self) -> Result<FolderNumber, ParseIntError> {
         let name = self.get_name().0;
-        let head = name.split("_").next().unwrap();
+        let head = name.split('_').next().unwrap();
         let head_parsed = head.parse::<usize>();
         head_parsed.map(|result| FolderNumber(result, head.len()))
     }
@@ -80,11 +80,10 @@ impl FolderNameTrait for FolderName {
             number,
             normalized_name: self.get_remaining_name(),
         };
-        let instruction = FolderRenameInstruction {
+        FolderRenameInstruction {
             target: FolderNameVariant::Normal(self.clone()),
             new_name: numbered,
-        };
-        instruction
+        }
     }
 }
 impl FolderNameTrait for NumberedFolderName {
@@ -103,11 +102,10 @@ impl FolderNameTrait for NumberedFolderName {
             number,
             normalized_name: self.normalized_name.clone(),
         };
-        let instruction = FolderRenameInstruction {
+        FolderRenameInstruction {
             target: FolderNameVariant::Numbered(self.clone()),
             new_name: numbered,
-        };
-        instruction
+        }
     }
     fn get_remaining_name(&self) -> FolderNameNormalized {
         self.normalized_name.clone()
@@ -145,12 +143,11 @@ impl FolderList {
         let mut numbered = self.filter_numbered();
         let number_length = (numbered.len() - 1).to_string().len();
         numbered.sort();
-        let instructions = numbered
+        numbered
             .into_iter()
             .enumerate()
             .map(|(i, x)| x.numbering(FolderNumber(i, number_length)))
-            .collect();
-        instructions
+            .collect()
     }
     pub fn number(
         &self,
@@ -179,15 +176,14 @@ impl FolderList {
         // target_numberでソートし直す
         instructions.sort_by(|(_, a), (_, b)| a.cmp(b));
         // enumerateを使って間をつめる
-        let instructions = instructions
+        instructions
             .iter()
             .enumerate()
             .map(|(i, (name, _))| {
                 let target_number = FolderNumber(i, max_number_length);
                 name.numbering(target_number)
             })
-            .collect();
-        instructions
+            .collect()
     }
 }
 
@@ -252,7 +248,7 @@ mod test {
         let folder_name = FolderName("hoge".to_string());
         let instruction = folder_name.numbering(FolderNumber(39, 2));
         let instruction_expect = FolderRenameInstruction {
-            target: FolderNameVariant::Normal(folder_name.clone()),
+            target: FolderNameVariant::Normal(folder_name),
             new_name: NumberedFolderName {
                 number: FolderNumber(39, 2),
                 normalized_name: FolderNameNormalized("hoge".to_string()),
